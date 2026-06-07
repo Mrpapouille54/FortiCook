@@ -1,152 +1,313 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
-    <title>FortiCook.V2</title>
-</head>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="style.css" />
+        <title>FortiCook.V2</title>
+    </head>
 
-<header id="header">
-    
-    <table border="2" id="tab">
-    </table>
-    <button id="visi">ccccc</button>
-</header>
+    <header id="header">
+        <table border="2" id="tab"></table>
+        <button id="visi">Afficher/Masquer</button>
+        <button id="reset-save" title="Efface toute la progression sauvegardée">
+            ⟳ Réinitialiser
+        </button>
+        <a href="exam.html" id="btn-exam">⚡ Mode Examen</a>
+    </header>
 
-<body>
-    <h1>FortiCook.V2</h1>
-    <main id="main"></main>
+    <body>
+        <h1>FortiCook.V2</h1>
+        <main id="main"></main>
 
-    <script src="data.js"></script>
+        <script src="data.js"></script>
 
-    <script>
+        <script>
+            let main = document.getElementById("main");
+            let header = document.getElementById("header");
+            let tab = document.getElementById("tab");
+            let visi = document.getElementById("visi");
+            let resetSave = document.getElementById("reset-save");
 
-        let main = document.getElementById("main");
-        let header = document.getElementById("header");
-        let tab = document.getElementById("tab");
-        let visi = document.getElementById("visi");
+            let taille = questions.length;
+            let liste_de_reponse = [];
+            let formation = "";
 
-        let taille = questions.length;
-        let liste_de_reponse = [];
-        let formation = "";
+            const STORAGE_KEY = "forticook_v2_state";
 
+            for (let x = 0; x < taille; x++) {
+                liste_de_reponse.push([]);
 
-        for (let x = 0; x < taille; x++) {
-            liste_de_reponse.push([]);
+                formation += '<div id="' + x + '">';
+                formation +=
+                    "<h3>question : " + x + " : " + questions[x].Q + "</h3>";
+                formation += "<ol>";
 
-            formation += '<div id="' + x + '">';
-            formation += '<h3>question : ' + x + ' : ' + questions[x].Q + '</h3>';
-            formation += '<ol>';
+                for (let y = 0; y < questions[x].R.length; y++) {
+                    formation += '<li class="reponse">';
+                    formation += '<input type="checkbox" value="oui">';
+                    formation += questions[x].R[y];
+                    formation += "</li>";
+                }
 
-            for (let y = 0; y < questions[x].R.length; y++) {
-                formation += '<li class="reponse">';
-                formation += '<input type="checkbox" value="oui">';
-                formation += questions[x].R[y];
-                formation += '</li>';
+                formation += "</ol>";
+                formation += '<button class="bouton">Verification</button>';
+                formation += "</div>";
+
+                main.innerHTML += formation;
+                formation = "";
             }
 
-            formation += '</ol>';
-            formation += '<button class="bouton">Verification</button>';
-            formation += '</div>';
+            for (let ancre = 0; ancre < taille; ancre += 10) {
+                let p = '<a href="#' + ancre + '">question : ' + ancre + "</a>";
+                header.children[0].innerHTML += p;
+            }
 
-            main.innerHTML += formation;
-            formation = "";
-        }
+            let reponse = document.getElementsByClassName("reponse");
+            let bouton = document.getElementsByClassName("bouton");
 
-        
-        for (let ancre = 0; ancre < taille; ancre += 10) {
-            let p = '<a href="#' + ancre + '">question : ' + ancre + '</a>';
-            header.children[0].innerHTML += p;
-        }
+            for (let r = 0; r < reponse.length; r++) {
+                reponse[r].addEventListener("click", ajout);
+            }
 
-        
-        let reponse = document.getElementsByClassName("reponse");
-        let bouton = document.getElementsByClassName("bouton");
+            for (let v = 0; v < bouton.length; v++) {
+                bouton[v].addEventListener("click", verification);
+            }
 
-        
-        for (let r = 0; r < reponse.length; r++) {
-            reponse[r].addEventListener('click', ajout);
-        }
+            // ── SAUVEGARDE LOCALSTORAGE ──────────────────────────────────
 
-        
-        for (let v = 0; v < bouton.length; v++) {
-            bouton[v].addEventListener('click', verification);
-        }
+            /**
+             * Construit un instantané de l'état courant et le persiste
+             * dans localStorage. Appelé après chaque interaction.
+             *
+             * Format stocké (tableau indexé par n° de question) :
+             *   { reponses: number[], verifie: boolean, classes: string[] }
+             */
+            function sauvegarder() {
+                const etat = [];
 
-        
-        function ajout(event) {
-            let id_question = Number(this.parentElement.parentElement.id);
-            let liste_ol = Array.from(this.parentElement.children).indexOf(this);
-            let checkbox = this.children[0];
+                for (let i = 0; i < taille; i++) {
+                    const card = document.getElementById(String(i));
+                    const btn = card.querySelector(".bouton");
+                    const items = card.querySelectorAll(".reponse");
 
-            if (liste_de_reponse[id_question].includes(liste_ol)) {
-                let ind = liste_de_reponse[id_question].indexOf(liste_ol);
-                liste_de_reponse[id_question].splice(ind, 1);
-                
-                if (event.target !== checkbox) {
-                    checkbox.checked = false;
+                    const classes = [];
+                    items.forEach(function (li) {
+                        classes.push(li.className);
+                    });
+
+                    etat.push({
+                        reponses: liste_de_reponse[i].slice(), // copie du tableau
+                        verifie: btn.textContent.trim() === "Reset",
+                        classes: classes,
+                    });
                 }
-            } else {
-                liste_de_reponse[id_question].push(liste_ol);
-                
-                if (event.target !== checkbox) {
-                    checkbox.checked = true;
+
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(etat));
+                } catch (e) {
+                    console.warn(
+                        "FortiCook – impossible d'écrire dans localStorage :",
+                        e,
+                    );
                 }
             }
-        }
 
-        // Vérification des réponses — CORRIGÉ
-        function verification() {
-            let id_question = this.parentElement.id;
+            /**
+             * Lit localStorage et restitue l'état sauvegardé :
+             *   – coche les cases, rétablit les classes CSS de correction,
+             *     remet les boutons en mode Reset si nécessaire.
+             * Appelé une seule fois au chargement de la page.
+             */
+            function restaurer() {
+                let raw;
+                try {
+                    raw = localStorage.getItem(STORAGE_KEY);
+                } catch (e) {
+                    console.warn(
+                        "FortiCook – impossible de lire localStorage :",
+                        e,
+                    );
+                    return;
+                }
+                if (!raw) return;
 
-            if (this.textContent == 'Verification') {
+                let etat;
+                try {
+                    etat = JSON.parse(raw);
+                } catch (e) {
+                    console.warn(
+                        "FortiCook – données corrompues, réinitialisation.",
+                    );
+                    localStorage.removeItem(STORAGE_KEY);
+                    return;
+                }
 
-                
-                for (let z = 0; z < questions[id_question].BR.length; z++) {
-                    let a = questions[id_question].BR[z];
-                    if (liste_de_reponse[id_question].includes(a)) {
-                        this.parentElement.children[1].children[a].className = "reponse vrai";
-                    } else {
-                        this.parentElement.children[1].children[a].className = "reponse manque";
+                // Sécurité : on ignore si le nombre de questions a changé
+                if (!Array.isArray(etat) || etat.length !== taille) {
+                    console.warn(
+                        "FortiCook – nombre de questions différent, réinitialisation.",
+                    );
+                    localStorage.removeItem(STORAGE_KEY);
+                    return;
+                }
+
+                for (let i = 0; i < taille; i++) {
+                    const q = etat[i];
+                    const card = document.getElementById(String(i));
+                    const btn = card.querySelector(".bouton");
+                    const items = card.querySelectorAll(".reponse");
+
+                    // Restaurer le tableau de réponses sélectionnées
+                    liste_de_reponse[i] = q.reponses.slice();
+
+                    // Restaurer les checkboxes cochées
+                    q.reponses.forEach(function (idx) {
+                        if (items[idx]) {
+                            items[idx].children[0].checked = true;
+                        }
+                    });
+
+                    // Restaurer les classes CSS (vrai / faux / manque / neutre)
+                    if (q.classes && q.classes.length === items.length) {
+                        q.classes.forEach(function (cls, idx) {
+                            items[idx].className = cls;
+                        });
+                    }
+
+                    // Restaurer le libellé du bouton
+                    if (q.verifie) {
+                        btn.textContent = "Reset";
+                    }
+                }
+            }
+
+            // ── FONCTIONS MÉTIER ─────────────────────────────────────────
+
+            function ajout(event) {
+                let id_question = Number(this.parentElement.parentElement.id);
+                let liste_ol = Array.from(this.parentElement.children).indexOf(
+                    this,
+                );
+                let checkbox = this.children[0];
+
+                if (liste_de_reponse[id_question].includes(liste_ol)) {
+                    let ind = liste_de_reponse[id_question].indexOf(liste_ol);
+                    liste_de_reponse[id_question].splice(ind, 1);
+
+                    if (event.target !== checkbox) {
+                        checkbox.checked = false;
+                    }
+                } else {
+                    liste_de_reponse[id_question].push(liste_ol);
+
+                    if (event.target !== checkbox) {
+                        checkbox.checked = true;
                     }
                 }
 
-                
-                for (let e = 0; e < liste_de_reponse[id_question].length; e++) {
-                    let indexReponse = liste_de_reponse[id_question][e];
-                    if (!questions[id_question].BR.includes(indexReponse)) {
-                        this.parentElement.children[1].children[indexReponse].className = "reponse faux";
+                sauvegarder(); // ← persist après chaque clic sur une réponse
+            }
+
+            // Vérification des réponses
+            function verification() {
+                let id_question = this.parentElement.id;
+
+                if (this.textContent == "Verification") {
+                    for (let z = 0; z < questions[id_question].BR.length; z++) {
+                        let a = questions[id_question].BR[z];
+                        if (liste_de_reponse[id_question].includes(a)) {
+                            this.parentElement.children[1].children[
+                                a
+                            ].className = "reponse vrai";
+                        } else {
+                            this.parentElement.children[1].children[
+                                a
+                            ].className = "reponse manque";
+                        }
                     }
+
+                    for (
+                        let e = 0;
+                        e < liste_de_reponse[id_question].length;
+                        e++
+                    ) {
+                        let indexReponse = liste_de_reponse[id_question][e];
+                        if (!questions[id_question].BR.includes(indexReponse)) {
+                            this.parentElement.children[1].children[
+                                indexReponse
+                            ].className = "reponse faux";
+                        }
+                    }
+
+                    this.textContent = "Reset";
+                } else {
+                    for (let z = 0; z < questions[id_question].R.length; z++) {
+                        this.parentElement.children[1].children[z].className =
+                            "reponse";
+                        this.parentElement.children[1].children[
+                            z
+                        ].children[0].checked = false;
+                    }
+                    liste_de_reponse[id_question] = [];
+                    this.textContent = "Verification";
                 }
 
-                this.textContent = "Reset";
+                sauvegarder(); // ← persist après vérification ou reset
+            }
 
-            } else {
-                
-                for (let z = 0; z < questions[id_question].R.length; z++) {
-                    this.parentElement.children[1].children[z].className = "reponse";
-                    this.parentElement.children[1].children[z].children[0].checked = false;
+            visi.addEventListener("click", degage);
+            let veri = true;
+            function degage() {
+                if (veri) {
+                    tab.style.display = "none";
+                    veri = false;
+                } else {
+                    tab.style.display = "block";
+                    veri = true;
                 }
-                liste_de_reponse[id_question] = [];
-                this.textContent = "Verification";
             }
-        }
-        visi.addEventListener('click', degage);
-        let veri = true;
-        function degage() {
-            if (veri) {
-            tab.style.display = "none";
-            veri = false;
 
-        }
-            else {
-                tab.style.display = 'block';
-                veri = true
+            // ── RÉINITIALISATION ─────────────────────────────────────────
+
+            /**
+             * Efface le localStorage et remet toutes les questions
+             * dans leur état initial (cases décochées, pas de couleurs).
+             */
+            function reinitialiser() {
+                if (!confirm("Effacer toute la progression sauvegardée ?"))
+                    return;
+
+                try {
+                    localStorage.removeItem(STORAGE_KEY);
+                } catch (e) {
+                    console.warn(
+                        "FortiCook – impossible d'effacer localStorage :",
+                        e,
+                    );
+                }
+
+                for (let i = 0; i < taille; i++) {
+                    const card = document.getElementById(String(i));
+                    const btn = card.querySelector(".bouton");
+                    const items = card.querySelectorAll(".reponse");
+
+                    liste_de_reponse[i] = [];
+
+                    items.forEach(function (li) {
+                        li.className = "reponse";
+                        li.children[0].checked = false;
+                    });
+
+                    btn.textContent = "Verification";
+                }
             }
-            
-        }
 
-    </script>
-</body>
+            resetSave.addEventListener("click", reinitialiser);
+
+            // ── INITIALISATION ───────────────────────────────────────────
+            // Restaurer l'état sauvegardé au chargement de la page
+            restaurer();
+        </script>
+    </body>
 </html>
